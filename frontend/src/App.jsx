@@ -7,7 +7,7 @@ import TaskFormModal from './components/TaskFormModal.jsx';
 import DeleteConfirmDialog from './components/DeleteConfirmDialog.jsx';
 import EmptyState from './components/EmptyState.jsx';
 
-const API_BASE = '/api/tasks';
+const API_BASE = 'https://mini-task-pwte.onrender.com/api/tasks';
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 
 export default function App() {
