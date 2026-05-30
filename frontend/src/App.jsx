@@ -6,8 +6,10 @@ import TaskCard from './components/TaskCard.jsx';
 import TaskFormModal from './components/TaskFormModal.jsx';
 import DeleteConfirmDialog from './components/DeleteConfirmDialog.jsx';
 import EmptyState from './components/EmptyState.jsx';
+import AuthModal from './components/AuthModal.jsx';
 
 const API_BASE = 'https://mini-task-pwte.onrender.com/api/tasks';
+const AUTH_BASE = 'https://mini-task-pwte.onrender.com/api/auth';
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 
 export default function App() {
@@ -19,13 +21,15 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [search, setSearch] = useState('');
+  const [authToken, setAuthToken] = useState(localStorage.getItem('token') || '');
+  const [showAuth, setShowAuth] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
 
   const fetchTasks = async () => {
     try {
-      const response = await fetch(API_BASE);
+      const response = await fetch(API_BASE, { headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
       if (!response.ok) {
         console.error('Failed to load tasks', response.statusText);
         setTasks([]);
@@ -33,7 +37,10 @@ export default function App() {
       }
       const data = await response.text();
       const parsed = data ? JSON.parse(data) : [];
-      setTasks(Array.isArray(parsed) ? parsed : []);
+      const normalized = Array.isArray(parsed)
+        ? parsed.map((t) => ({ ...t, id: t.id || t._id }))
+        : [];
+      setTasks(normalized);
     } catch (error) {
       console.error('Failed to load tasks', error);
       setTasks([]);
@@ -58,7 +65,7 @@ export default function App() {
       const method = editingTask ? 'PUT' : 'POST';
       await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
         body: JSON.stringify(taskData),
       });
       await fetchTasks();
@@ -75,7 +82,7 @@ export default function App() {
     try {
       await fetch(`${API_BASE}/${task.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
         body: JSON.stringify({ ...task, status: newStatus }),
       });
       await fetchTasks();
@@ -93,7 +100,7 @@ export default function App() {
     if (!deletingTask) return;
     setIsDeleting(true);
     try {
-      await fetch(`${API_BASE}/${deletingTask.id}`, { method: 'DELETE' });
+      await fetch(`${API_BASE}/${deletingTask.id}`, { method: 'DELETE', headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
       await fetchTasks();
       setDeletingTask(null);
     } catch (error) {
@@ -133,6 +140,48 @@ export default function App() {
     return filtered;
   }, [safeTasks, search, statusFilter, priorityFilter, sortBy]);
 
+  const handleRegister = async (email, password) => {
+    try {
+      const res = await fetch(`${AUTH_BASE}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) throw new Error('Register failed');
+      const data = await res.json();
+      localStorage.setItem('token', data.token);
+      setAuthToken(data.token);
+      setShowAuth(false);
+      await fetchTasks();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleLogin = async (email, password) => {
+    try {
+      const res = await fetch(`${AUTH_BASE}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) throw new Error('Login failed');
+      const data = await res.json();
+      localStorage.setItem('token', data.token);
+      setAuthToken(data.token);
+      setShowAuth(false);
+      await fetchTasks();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setAuthToken('');
+    setTasks([]);
+  };
+
   const hasFilters = search.trim() || statusFilter !== 'all' || priorityFilter !== 'all';
 
   return (
@@ -143,9 +192,20 @@ export default function App() {
           <h1>Modern task tracking in one place.</h1>
           <p className="hero-copy">Create, manage, and organize tasks with status, due dates, priority, and filtering.</p>
         </div>
-        <button className="primary-button header-button" onClick={handleCreate}>
-          <Plus size={18} /> New Task
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {authToken ? (
+            <>
+              <button className="secondary-button" onClick={handleLogout}>Logout</button>
+              <button className="primary-button header-button" onClick={handleCreate}>
+                <Plus size={18} /> New Task
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="secondary-button" onClick={() => setShowAuth(true)}>Sign in</button>
+            </>
+          )}
+        </div>
       </header>
 
       <main className="content-grid">
@@ -196,6 +256,12 @@ export default function App() {
         taskTitle={deletingTask?.title}
         onConfirm={handleDelete}
         isDeleting={isDeleting}
+      />
+      <AuthModal
+        open={showAuth}
+        onClose={() => setShowAuth(false)}
+        onLogin={handleLogin}
+        onRegister={handleRegister}
       />
     </div>
   );

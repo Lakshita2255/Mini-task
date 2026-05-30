@@ -457,3 +457,47 @@ h1 {
     transform: rotate(360deg);
   }
 }
+
+/* Auth modal styles */
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(7,12,27,0.6);
+  z-index: 80;
+}
+.auth-modal {
+  width: min(92%, 420px);
+  background: linear-gradient(180deg, rgba(15,23,42,0.98), rgba(10,14,22,0.98));
+  border: 1px solid rgba(148,163,184,0.12);
+  padding: 20px;
+  border-radius: 18px;
+  box-shadow: 0 20px 50px rgba(2,6,23,0.6);
+  color: #e6eef8;
+}
+.auth-close {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  color: #94a3b8;
+  float: right;
+  cursor: pointer;
+}
+.auth-brand {
+  font-weight: 800;
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+.auth-input {
+  width: 100%;
+  padding: 12px 14px;
+  margin: 8px 0;
+  border-radius: 12px;
+  border: 1px solid rgba(148,163,184,0.12);
+  background: rgba(15,23,42,0.85);
+  color: #e2e8f0;
+}
+.muted { color: #94a3b8; }
+.auth-note { margin-top: 12px; font-size: 13px; color: #94a3b8; }
+

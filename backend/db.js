@@ -1,17 +1,19 @@
-const { Pool } = require('pg');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
-let pool = null;
-if (process.env.DATABASE_URL) {
-  pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  });
+let connected = false;
+const mongoUri = process.env.MONGODB_URI || process.env.DATABASE_URL;
 
-  pool.connect().catch((error) => {
-    console.error('Database connection failed, falling back to local storage:', error.message);
-    pool = null;
-  });
+if (mongoUri) {
+  mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => {
+      connected = true;
+      console.log('Connected to MongoDB');
+    })
+    .catch((err) => {
+      connected = false;
+      console.error('MongoDB connection error, falling back to local storage:', err.message);
+    });
 }
 
-module.exports = pool;
+module.exports = { mongoose, connected };
