@@ -27,6 +27,7 @@ export default function App() {
     return stored ? JSON.parse(stored) : null;
   });
   const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
@@ -152,13 +153,17 @@ export default function App() {
 
   const handleRegister = async (email, password) => {
     setIsAuthLoading(true);
+    setAuthError('');
     try {
       const res = await fetch(`${AUTH_BASE}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      if (!res.ok) throw new Error('Register failed');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Register failed');
+      }
       const data = await res.json();
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
@@ -166,6 +171,7 @@ export default function App() {
       setUser(data.user);
     } catch (err) {
       console.error(err);
+      setAuthError(err.message);
     } finally {
       setIsAuthLoading(false);
     }
@@ -173,13 +179,17 @@ export default function App() {
 
   const handleLogin = async (email, password) => {
     setIsAuthLoading(true);
+    setAuthError('');
     try {
       const res = await fetch(`${AUTH_BASE}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      if (!res.ok) throw new Error('Login failed');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Login failed');
+      }
       const data = await res.json();
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
@@ -187,6 +197,7 @@ export default function App() {
       setUser(data.user);
     } catch (err) {
       console.error(err);
+      setAuthError(err.message);
     } finally {
       setIsAuthLoading(false);
     }
@@ -205,7 +216,12 @@ export default function App() {
   if (!authToken) {
     return (
       <div className="auth-fullpage">
-        <AuthPage onLogin={handleLogin} onRegister={handleRegister} loading={isAuthLoading} />
+        <AuthPage
+          onLogin={handleLogin}
+          onRegister={handleRegister}
+          loading={isAuthLoading}
+          error={authError}
+        />
       </div>
     );
   }
@@ -219,11 +235,11 @@ export default function App() {
           <p className="hero-copy">Create, manage, and organize tasks with status, due dates, priority, and filtering.</p>
         </div>
         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <div style={{ textAlign: 'right' }}>
-            <p className="eyebrow">Signed in as</p>
-            <p style={{ margin: 0, fontWeight: 700 }}>{user?.name || user?.email || 'Task User'}</p>
+          <div className="user-info-card">
+            <p className="eyebrow" style={{ margin: 0, marginBottom: 6 }}>Signed in as</p>
+            <p style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem' }}>{user?.name || user?.email || 'Task User'}</p>
+            <button className="logout-button" onClick={handleLogout}>Sign out</button>
           </div>
-          <button className="secondary-button" onClick={handleLogout}>Logout</button>
           <button className="primary-button header-button" onClick={handleCreate}>
             <Plus size={18} /> New Task
           </button>

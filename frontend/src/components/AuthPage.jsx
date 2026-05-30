@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function AuthPage({ onLogin, onRegister, loading }) {
+export default function AuthPage({ onLogin, onRegister, loading, error }) {
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -48,6 +48,7 @@ export default function AuthPage({ onLogin, onRegister, loading }) {
             onChange={(e) => setPassword(e.target.value)}
           />
 
+          {error && <div className="auth-error">{error}</div>}
           <button className="primary-button auth-submit" onClick={handleSubmit} disabled={loading || !email || !password}>
             {loading ? 'Working...' : mode === 'login' ? 'Sign in' : 'Create account'}
           </button>
