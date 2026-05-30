@@ -19,7 +19,20 @@ JWT_SECRET="a-strong-secret"
 PORT=5000
 ```
 
-4. Start the API:
+4. To create your MongoDB Atlas connection string:
+   - Create a free cluster at https://www.mongodb.com/cloud/atlas
+   - Create a database user with a password
+   - Add your IP address to Network Access
+   - Click "Connect" → "Connect your application"
+   - Copy the connection string and replace `<user>`, `<password>`, and the database name
+
+5. To create a strong `JWT_SECRET`, use any secure random string. Example command:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+6. Start the API:
 
 ```bash
 npm run dev
