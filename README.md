@@ -11,33 +11,21 @@ A polished full-stack task manager with full CRUD, status tracking, due dates, p
 
 1. Open a terminal in `backend/`
 2. Run `npm install`
-3. Create a `.env` file with:
+3. Copy `.env.example` to `.env` and set your MongoDB Atlas URI + JWT secret:
 
 ```env
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
+MONGODB_URI="mongodb+srv://<user>:<password>@cluster0.mongodb.net/mini-task?retryWrites=true&w=majority"
+JWT_SECRET="a-strong-secret"
 PORT=5000
 ```
 
-4. Create the tasks table in your PostgreSQL database:
-
-```sql
-CREATE TABLE tasks (
-  id SERIAL PRIMARY KEY,
-  title TEXT NOT NULL,
-  description TEXT DEFAULT '',
-  status TEXT NOT NULL DEFAULT 'todo',
-  priority TEXT NOT NULL DEFAULT 'medium',
-  due_date DATE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-```
-
-5. Start the API:
+4. Start the API:
 
 ```bash
 npm run dev
 ```
+
+> If `MONGODB_URI` is not configured or connection fails, the backend falls back to in-memory storage for development only. Data will not persist without MongoDB.
 
 ## Frontend Setup
 

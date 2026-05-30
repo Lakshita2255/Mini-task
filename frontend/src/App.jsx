@@ -6,10 +6,10 @@ import TaskCard from './components/TaskCard.jsx';
 import TaskFormModal from './components/TaskFormModal.jsx';
 import DeleteConfirmDialog from './components/DeleteConfirmDialog.jsx';
 import EmptyState from './components/EmptyState.jsx';
-import AuthModal from './components/AuthModal.jsx';
+import AuthPage from './components/AuthPage.jsx';
 
-const API_BASE = 'https://mini-task-pwte.onrender.com/api/tasks';
-const AUTH_BASE = 'https://mini-task-pwte.onrender.com/api/auth';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api/tasks';
+const AUTH_BASE = import.meta.env.VITE_AUTH_BASE || 'http://localhost:5000/api/auth';
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 
 export default function App() {
@@ -22,7 +22,11 @@ export default function App() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [search, setSearch] = useState('');
   const [authToken, setAuthToken] = useState(localStorage.getItem('token') || '');
-  const [showAuth, setShowAuth] = useState(false);
+  const [user, setUser] = useState(() => {
+    const stored = localStorage.getItem('user');
+    return stored ? JSON.parse(stored) : null;
+  });
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
@@ -50,8 +54,14 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchTasks();
-  }, []);
+    if (authToken) {
+      setLoading(true);
+      fetchTasks();
+    } else {
+      setLoading(false);
+      setTasks([]);
+    }
+  }, [authToken]);
 
   const handleCreate = () => {
     setEditingTask(null);
@@ -141,6 +151,7 @@ export default function App() {
   }, [safeTasks, search, statusFilter, priorityFilter, sortBy]);
 
   const handleRegister = async (email, password) => {
+    setIsAuthLoading(true);
     try {
       const res = await fetch(`${AUTH_BASE}/register`, {
         method: 'POST',
@@ -150,15 +161,18 @@ export default function App() {
       if (!res.ok) throw new Error('Register failed');
       const data = await res.json();
       localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
       setAuthToken(data.token);
-      setShowAuth(false);
-      await fetchTasks();
+      setUser(data.user);
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsAuthLoading(false);
     }
   };
 
   const handleLogin = async (email, password) => {
+    setIsAuthLoading(true);
     try {
       const res = await fetch(`${AUTH_BASE}/login`, {
         method: 'POST',
@@ -168,21 +182,33 @@ export default function App() {
       if (!res.ok) throw new Error('Login failed');
       const data = await res.json();
       localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
       setAuthToken(data.token);
-      setShowAuth(false);
-      await fetchTasks();
+      setUser(data.user);
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsAuthLoading(false);
     }
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setAuthToken('');
+    setUser(null);
     setTasks([]);
   };
 
   const hasFilters = search.trim() || statusFilter !== 'all' || priorityFilter !== 'all';
+
+  if (!authToken) {
+    return (
+      <div className="auth-fullpage">
+        <AuthPage onLogin={handleLogin} onRegister={handleRegister} loading={isAuthLoading} />
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell">
@@ -192,19 +218,15 @@ export default function App() {
           <h1>Modern task tracking in one place.</h1>
           <p className="hero-copy">Create, manage, and organize tasks with status, due dates, priority, and filtering.</p>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {authToken ? (
-            <>
-              <button className="secondary-button" onClick={handleLogout}>Logout</button>
-              <button className="primary-button header-button" onClick={handleCreate}>
-                <Plus size={18} /> New Task
-              </button>
-            </>
-          ) : (
-            <>
-              <button className="secondary-button" onClick={() => setShowAuth(true)}>Sign in</button>
-            </>
-          )}
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+          <div style={{ textAlign: 'right' }}>
+            <p className="eyebrow">Signed in as</p>
+            <p style={{ margin: 0, fontWeight: 700 }}>{user?.name || user?.email || 'Task User'}</p>
+          </div>
+          <button className="secondary-button" onClick={handleLogout}>Logout</button>
+          <button className="primary-button header-button" onClick={handleCreate}>
+            <Plus size={18} /> New Task
+          </button>
         </div>
       </header>
 
@@ -256,12 +278,6 @@ export default function App() {
         taskTitle={deletingTask?.title}
         onConfirm={handleDelete}
         isDeleting={isDeleting}
-      />
-      <AuthModal
-        open={showAuth}
-        onClose={() => setShowAuth(false)}
-        onLogin={handleLogin}
-        onRegister={handleRegister}
       />
     </div>
   );
