@@ -11,25 +11,25 @@ A polished full-stack task manager with full CRUD, status tracking, due dates, p
 
 1. Open a terminal in `backend/`
 2. Run `npm install`
-3. Copy `.env.example` to `.env` and set your MongoDB Atlas URI + JWT secret:
+3. Copy `.env.example` to `.env` and set your PostgreSQL connection string + JWT secret:
 
 ```env
-MONGODB_URI="mongodb+srv://<user>:<password>@cluster0.mongodb.net/mini-task?retryWrites=true&w=majority"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/mini_task"
 JWT_SECRET="a-strong-secret"
 PORT=5000
 ```
 
-4. To create your MongoDB Atlas connection string:
-   - Create a free cluster at https://www.mongodb.com/cloud/atlas
-   - Create a database user with a password
-   - Add your IP address to Network Access
-   - Click "Connect" → "Connect your application"
-   - Copy the connection string and replace `<user>`, `<password>`, and the database name
-
-5. To create a strong `JWT_SECRET`, use any secure random string. Example command:
+4. To create a strong `JWT_SECRET`, use any secure random string. Example command:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+5. Initialize the PostgreSQL schema:
+
+```bash
+cd backend
+npm run db:init
 ```
 
 6. Start the API:
@@ -38,7 +38,18 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 npm run dev
 ```
 
-> If `MONGODB_URI` is not configured or connection fails, the backend falls back to in-memory storage for development only. Data will not persist without MongoDB.
+> The backend uses PostgreSQL through `DATABASE_URL`. Ensure your database is running and the connection string is correct.
+
+### Render deployment
+
+If the frontend is deployed separately from the backend, set the following environment variables in Render for the frontend service:
+
+```env
+VITE_API_BASE="https://<your-backend>.onrender.com/api/tasks"
+VITE_AUTH_BASE="https://<your-backend>.onrender.com/api/auth"
+```
+
+If the frontend and backend are served from the same domain, the app will use relative `/api/*` paths automatically.
 
 ## Frontend Setup
 

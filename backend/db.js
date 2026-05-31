@@ -1,19 +1,23 @@
-const mongoose = require('mongoose');
+const { Pool } = require('pg');
 require('dotenv').config();
 
-let connected = false;
-const mongoUri = process.env.MONGODB_URI || process.env.DATABASE_URL;
-
-if (mongoUri) {
-  mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(() => {
-      connected = true;
-      console.log('Connected to MongoDB');
-    })
-    .catch((err) => {
-      connected = false;
-      console.error('MongoDB connection error, falling back to local storage:', err.message);
-    });
+const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+if (!connectionString) {
+  console.error('Missing DATABASE_URL or POSTGRES_URL in environment');
+  process.exit(1);
 }
 
-module.exports = { mongoose, connected };
+const pool = new Pool({
+  connectionString,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
+
+pool.on('connect', () => {
+  console.log('Connected to PostgreSQL');
+});
+
+pool.on('error', (err) => {
+  console.error('PostgreSQL pool error', err);
+});
+
+module.exports = pool;

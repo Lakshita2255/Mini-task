@@ -8,8 +8,9 @@ import DeleteConfirmDialog from './components/DeleteConfirmDialog.jsx';
 import EmptyState from './components/EmptyState.jsx';
 import AuthPage from './components/AuthPage.jsx';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api/tasks';
-const AUTH_BASE = import.meta.env.VITE_AUTH_BASE || 'http://localhost:5000/api/auth';
+const origin = typeof window !== 'undefined' ? window.location.origin : '';
+const API_BASE = import.meta.env.VITE_API_BASE || `${origin}/api/tasks`;
+const AUTH_BASE = import.meta.env.VITE_AUTH_BASE || `${origin}/api/auth`;
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 
 export default function App() {
@@ -171,7 +172,10 @@ export default function App() {
       setUser(data.user);
     } catch (err) {
       console.error(err);
-      setAuthError(err.message);
+      const message = err?.message?.includes('Failed to fetch')
+        ? 'Unable to reach the API. Check your deployment URL or backend service.'
+        : err.message || 'Registration failed. Please try again.';
+      setAuthError(message);
     } finally {
       setIsAuthLoading(false);
     }
@@ -197,7 +201,10 @@ export default function App() {
       setUser(data.user);
     } catch (err) {
       console.error(err);
-      setAuthError(err.message);
+      const message = err?.message?.includes('Failed to fetch')
+        ? 'Unable to reach the API. Check your deployment URL or backend service.'
+        : err.message || 'Login failed. Please try again.';
+      setAuthError(message);
     } finally {
       setIsAuthLoading(false);
     }
