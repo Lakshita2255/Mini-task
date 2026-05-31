@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { format, isPast, isToday } from 'date-fns';
-import { Circle, ArrowRightCircle, CheckCircle2, Pencil, Trash2, Flag, CalendarDays, Sparkles } from 'lucide-react';
+import { Circle, ArrowRightCircle, Pencil, Trash2, Flag, CalendarDays, Sparkles } from 'lucide-react';
 
 const statusStyles = {
   todo: { label: 'To Do', color: '#f59e0b', bg: '#fde68a33' },
@@ -50,7 +50,7 @@ export default function TaskCard({ task, onEdit, onDelete, onStatusChange }) {
         {dueDate && (
           <span className="badge" style={{ border: `1px solid ${isOverdue ? '#ef4444' : '#38bdf8'}`, color: isOverdue ? '#ef4444' : '#38bdf8' }}>
             <CalendarDays size={14} /> {format(dueDate, 'MMM d, yyyy')}
-            {isOverdue ? ' • Overdue' : isTodayDue ? ' • Today' : ''}
+            {isOverdue ? ' - Overdue' : isTodayDue ? ' - Today' : ''}
           </span>
         )}
       </div>

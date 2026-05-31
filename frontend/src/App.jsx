@@ -6,11 +6,9 @@ import TaskCard from './components/TaskCard.jsx';
 import TaskFormModal from './components/TaskFormModal.jsx';
 import DeleteConfirmDialog from './components/DeleteConfirmDialog.jsx';
 import EmptyState from './components/EmptyState.jsx';
-import AuthPage from './components/AuthPage.jsx';
 
 const origin = typeof window !== 'undefined' ? window.location.origin : '';
 const API_BASE = import.meta.env.VITE_API_BASE || `${origin}/api/tasks`;
-const AUTH_BASE = import.meta.env.VITE_AUTH_BASE || `${origin}/api/auth`;
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 
 export default function App() {
@@ -22,20 +20,13 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [search, setSearch] = useState('');
-  const [authToken, setAuthToken] = useState(localStorage.getItem('token') || '');
-  const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
-  });
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
 
   const fetchTasks = async () => {
     try {
-      const response = await fetch(API_BASE, { headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
+      const response = await fetch(API_BASE);
       if (!response.ok) {
         console.error('Failed to load tasks', response.statusText);
         setTasks([]);
@@ -56,14 +47,9 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (authToken) {
-      setLoading(true);
-      fetchTasks();
-    } else {
-      setLoading(false);
-      setTasks([]);
-    }
-  }, [authToken]);
+    setLoading(true);
+    fetchTasks();
+  }, []);
 
   const handleCreate = () => {
     setEditingTask(null);
@@ -77,7 +63,7 @@ export default function App() {
       const method = editingTask ? 'PUT' : 'POST';
       await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(taskData),
       });
       await fetchTasks();
@@ -94,7 +80,7 @@ export default function App() {
     try {
       await fetch(`${API_BASE}/${task.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...task, status: newStatus }),
       });
       await fetchTasks();
@@ -112,7 +98,7 @@ export default function App() {
     if (!deletingTask) return;
     setIsDeleting(true);
     try {
-      await fetch(`${API_BASE}/${deletingTask.id}`, { method: 'DELETE', headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
+      await fetch(`${API_BASE}/${deletingTask.id}`, { method: 'DELETE' });
       await fetchTasks();
       setDeletingTask(null);
     } catch (error) {
@@ -152,86 +138,7 @@ export default function App() {
     return filtered;
   }, [safeTasks, search, statusFilter, priorityFilter, sortBy]);
 
-  const handleRegister = async (email, password) => {
-    setIsAuthLoading(true);
-    setAuthError('');
-    try {
-      const res = await fetch(`${AUTH_BASE}/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Register failed');
-      }
-      const data = await res.json();
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      setAuthToken(data.token);
-      setUser(data.user);
-    } catch (err) {
-      console.error(err);
-      const message = err?.message?.includes('Failed to fetch')
-        ? 'Unable to reach the API. Check your deployment URL or backend service.'
-        : err.message || 'Registration failed. Please try again.';
-      setAuthError(message);
-    } finally {
-      setIsAuthLoading(false);
-    }
-  };
-
-  const handleLogin = async (email, password) => {
-    setIsAuthLoading(true);
-    setAuthError('');
-    try {
-      const res = await fetch(`${AUTH_BASE}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Login failed');
-      }
-      const data = await res.json();
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      setAuthToken(data.token);
-      setUser(data.user);
-    } catch (err) {
-      console.error(err);
-      const message = err?.message?.includes('Failed to fetch')
-        ? 'Unable to reach the API. Check your deployment URL or backend service.'
-        : err.message || 'Login failed. Please try again.';
-      setAuthError(message);
-    } finally {
-      setIsAuthLoading(false);
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setAuthToken('');
-    setUser(null);
-    setTasks([]);
-  };
-
   const hasFilters = search.trim() || statusFilter !== 'all' || priorityFilter !== 'all';
-
-  if (!authToken) {
-    return (
-      <div className="auth-fullpage">
-        <AuthPage
-          onLogin={handleLogin}
-          onRegister={handleRegister}
-          loading={isAuthLoading}
-          error={authError}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="app-shell">
@@ -242,11 +149,6 @@ export default function App() {
           <p className="hero-copy">Create, manage, and organize tasks with status, due dates, priority, and filtering.</p>
         </div>
         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <div className="user-info-card">
-            <p className="eyebrow" style={{ margin: 0, marginBottom: 6 }}>Signed in as</p>
-            <p style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem' }}>{user?.name || user?.email || 'Task User'}</p>
-            <button className="logout-button" onClick={handleLogout}>Sign out</button>
-          </div>
           <button className="primary-button header-button" onClick={handleCreate}>
             <Plus size={18} /> New Task
           </button>

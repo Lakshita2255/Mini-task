@@ -4,35 +4,30 @@ A polished full-stack task manager with full CRUD, status tracking, due dates, p
 
 ## Project Structure
 
-- `backend/` — Express API for task CRUD operations
-- `frontend/` — React + Vite frontend UI
+- `backend/` - Express API for task CRUD operations
+- `frontend/` - React + Vite frontend UI
 
 ## Backend Setup
 
 1. Open a terminal in `backend/`
 2. Run `npm install`
-3. Copy `.env.example` to `.env` and set your PostgreSQL connection string + JWT secret:
+3. Copy `.env.example` to `.env` and set your PostgreSQL connection string:
 
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/mini_task"
-JWT_SECRET="a-strong-secret"
 PORT=5000
 ```
 
-4. To create a strong `JWT_SECRET`, use any secure random string. Example command:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-5. Initialize the PostgreSQL schema:
+4. Initialize the PostgreSQL schema:
 
 ```bash
 cd backend
 npm run db:init
 ```
 
-6. Start the API:
+This will create the `tasks` table, remove the old auth-only `user_id` task column if it exists, and automatically insert sample tasks in `todo`, `in_progress`, and `completed` status if the table is empty.
+
+5. Start the API:
 
 ```bash
 npm run dev
@@ -40,13 +35,12 @@ npm run dev
 
 > The backend uses PostgreSQL through `DATABASE_URL`. Ensure your database is running and the connection string is correct.
 
-### Render deployment
+### Render Deployment
 
-If the frontend is deployed separately from the backend, set the following environment variables in Render for the frontend service:
+If the frontend is deployed separately from the backend, set the following environment variable in Render for the frontend service:
 
 ```env
 VITE_API_BASE="https://<your-backend>.onrender.com/api/tasks"
-VITE_AUTH_BASE="https://<your-backend>.onrender.com/api/auth"
 ```
 
 If the frontend and backend are served from the same domain, the app will use relative `/api/*` paths automatically.
@@ -75,4 +69,4 @@ npm run dev
 ## Notes
 
 - If you use Supabase, set `DATABASE_URL` from the Supabase project settings.
-- The frontend proxies API calls to `http://localhost:5000`.
+- The frontend proxies API calls to `http://localhost:5000` during local development.
