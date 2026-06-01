@@ -11,6 +11,23 @@ const origin = typeof window !== 'undefined' ? window.location.origin : '';
 const API_BASE = import.meta.env.VITE_API_BASE || `${origin}/api/tasks`;
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 
+const parseResponseBody = (text) => {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: text };
+  }
+};
+
+const getSaveErrorMessage = (error) => {
+  if (error instanceof TypeError) {
+    return 'Could not reach the task API. Make sure the backend is running, then try again.';
+  }
+
+  return error.message || 'Task could not be saved. Please try again.';
+};
+
 export default function App() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,6 +36,7 @@ export default function App() {
   const [deletingTask, setDeletingTask] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [formError, setFormError] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -53,24 +71,40 @@ export default function App() {
 
   const handleCreate = () => {
     setEditingTask(null);
+    setFormError('');
     setFormOpen(true);
   };
 
   const handleSubmit = async (taskData) => {
     setIsSubmitting(true);
+    setFormError('');
     try {
       const url = editingTask ? `${API_BASE}/${editingTask.id}` : API_BASE;
       const method = editingTask ? 'PUT' : 'POST';
-      await fetch(url, {
+      const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(taskData),
       });
+
+      const responseBody = parseResponseBody(await response.text());
+
+      if (!response.ok) {
+        throw new Error(responseBody?.error || `Request failed with status ${response.status}`);
+      }
+
       await fetchTasks();
+      if (!editingTask) {
+        setSearch('');
+        setStatusFilter('all');
+        setPriorityFilter('all');
+        setSortBy('newest');
+      }
       setFormOpen(false);
       setEditingTask(null);
     } catch (error) {
       console.error('Save failed', error);
+      setFormError(getSaveErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -91,6 +125,7 @@ export default function App() {
 
   const handleEdit = (task) => {
     setEditingTask(task);
+    setFormError('');
     setFormOpen(true);
   };
 
@@ -192,10 +227,14 @@ export default function App() {
 
       <TaskFormModal
         open={formOpen}
-        onClose={() => setFormOpen(false)}
+        onClose={() => {
+          setFormOpen(false);
+          setFormError('');
+        }}
         task={editingTask}
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
+        error={formError}
       />
       <DeleteConfirmDialog
         open={!!deletingTask}

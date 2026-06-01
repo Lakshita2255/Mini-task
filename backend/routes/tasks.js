@@ -1,8 +1,11 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const router = express.Router();
 const { pool } = require('../db');
 
-const memoryTasks = [
+const localTasksPath = path.join(__dirname, '..', 'local-tasks.json');
+const defaultTasks = [
   {
     id: 1,
     title: 'Plan the product launch',
@@ -35,7 +38,27 @@ const memoryTasks = [
   },
 ];
 
-let nextMemoryId = 4;
+function readLocalTasks() {
+  if (!fs.existsSync(localTasksPath)) {
+    return defaultTasks;
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(localTasksPath, 'utf8'));
+    return Array.isArray(parsed) ? parsed : defaultTasks;
+  } catch (error) {
+    console.error('Failed to read local task storage:', error);
+    return defaultTasks;
+  }
+}
+
+function writeLocalTasks(tasks) {
+  fs.writeFileSync(localTasksPath, JSON.stringify(tasks, null, 2));
+}
+
+function getNextLocalId(tasks) {
+  return tasks.reduce((maxId, task) => Math.max(maxId, Number(task.id) || 0), 0) + 1;
+}
 
 function sortTasks(tasks) {
   return [...tasks].sort((a, b) => {
@@ -50,7 +73,7 @@ function sortTasks(tasks) {
 
 router.get('/', async (req, res) => {
   if (!pool) {
-    return res.json(sortTasks(memoryTasks));
+    return res.json(sortTasks(readLocalTasks()));
   }
 
   try {
@@ -71,9 +94,10 @@ router.post('/', async (req, res) => {
   if (!title) return res.status(400).json({ error: 'Title is required' });
 
   if (!pool) {
+    const tasks = readLocalTasks();
     const now = new Date().toISOString();
     const task = {
-      id: nextMemoryId++,
+      id: getNextLocalId(tasks),
       title,
       description: description || '',
       status: status || 'todo',
@@ -82,7 +106,8 @@ router.post('/', async (req, res) => {
       created_at: now,
       updated_at: now,
     };
-    memoryTasks.push(task);
+    tasks.push(task);
+    writeLocalTasks(tasks);
     return res.status(201).json(task);
   }
 
@@ -104,7 +129,8 @@ router.put('/:id', async (req, res) => {
   const { title, description, status, priority, due_date } = req.body;
 
   if (!pool) {
-    const task = memoryTasks.find((item) => item.id === Number(req.params.id));
+    const tasks = readLocalTasks();
+    const task = tasks.find((item) => item.id === Number(req.params.id));
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
     task.title = title || task.title;
@@ -113,6 +139,7 @@ router.put('/:id', async (req, res) => {
     task.priority = priority || task.priority;
     task.due_date = due_date || null;
     task.updated_at = new Date().toISOString();
+    writeLocalTasks(tasks);
     return res.json(task);
   }
 
@@ -140,10 +167,12 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   if (!pool) {
-    const taskIndex = memoryTasks.findIndex((item) => item.id === Number(req.params.id));
+    const tasks = readLocalTasks();
+    const taskIndex = tasks.findIndex((item) => item.id === Number(req.params.id));
     if (taskIndex === -1) return res.status(404).json({ error: 'Task not found' });
 
-    memoryTasks.splice(taskIndex, 1);
+    tasks.splice(taskIndex, 1);
+    writeLocalTasks(tasks);
     return res.json({ message: 'Task deleted' });
   }
 

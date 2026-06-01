@@ -3,7 +3,7 @@ import { X, Save, PlusCircle } from 'lucide-react';
 
 const defaultTask = { title: '', description: '', status: 'todo', priority: 'medium', due_date: '' };
 
-export default function TaskFormModal({ open, onClose, task, onSubmit, isSubmitting }) {
+export default function TaskFormModal({ open, onClose, task, onSubmit, isSubmitting, error }) {
   const [form, setForm] = useState(defaultTask);
   const [errors, setErrors] = useState({});
 
@@ -29,7 +29,6 @@ export default function TaskFormModal({ open, onClose, task, onSubmit, isSubmitt
   const validate = () => {
     const next = {};
     if (!form.title.trim()) next.title = 'Task title is required';
-    if (!form.due_date) next.due_date = 'Choose a due date';
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -37,7 +36,12 @@ export default function TaskFormModal({ open, onClose, task, onSubmit, isSubmitt
   const handleSubmit = (event) => {
     event.preventDefault();
     if (!validate()) return;
-    onSubmit(form);
+    onSubmit({
+      ...form,
+      title: form.title.trim(),
+      description: form.description.trim(),
+      due_date: form.due_date || null,
+    });
   };
 
   return (
@@ -100,10 +104,10 @@ export default function TaskFormModal({ open, onClose, task, onSubmit, isSubmitt
               value={form.due_date}
               onChange={(event) => setForm({ ...form, due_date: event.target.value })}
             />
-            {errors.due_date && <span className="field-error">{errors.due_date}</span>}
           </label>
 
           <div className="dialog-actions">
+            {error && <span className="form-error">{error}</span>}
             <button type="button" className="soft-button" onClick={onClose}>
               Cancel
             </button>
